@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- ARTIFACT-START -->
+<title>Verse Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Noto+Serif+Hebrew:wght@400;500;600&display=swap">
+<style>
+/* Layout: a passage "lectern" — scripture panes on the left, a sticky resource drawer on the right; favorites rail above. */
+:root {
+  --paper: #F3F5F9;
+  --surface: #FFFFFF;
+  --surface-2: #F8F9FC;
+  --ink: #131A2C;
+  --muted: #5B6579;
+  --faint: #8A93A6;
+  --line: #DDE2EB;
+  --lapis: #2741A6;
+  --lapis-soft: #E7ECFA;
+  --lapis-wash: rgba(39, 65, 166, 0.07);
+  --gold: #B7811A;
+  --gold-soft: #FBEFD2;
+  --rubric: #A93A2D;
+  --on-lapis: #FFFFFF;
+  --shadow: 0 1px 2px rgba(19, 26, 44, 0.05), 0 8px 24px -12px rgba(19, 26, 44, 0.18);
+
+  --f-display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --f-ui: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-text: "Gentium Book Plus", "Gentium Plus", "Times New Roman", serif;
+  --f-greek: "Gentium Book Plus", "Gentium Plus", "Times New Roman", serif;
+  --f-hebrew: "Noto Serif Hebrew", "SBL Hebrew", "Times New Roman", serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+  --r-sm: 6px;
+  --r-md: 12px;
+  --r-lg: 20px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0D1220; --surface: #151B2B; --surface-2: #111727; --ink: #E7EBF4; --muted: #9AA4B8; --faint: #6E788D;
+    --line: #262F47; --lapis: #93A9FF; --lapis-soft: #1D2850; --lapis-wash: rgba(147, 169, 255, 0.08);
+    --gold: #E9B652; --gold-soft: #3A2D10; --rubric: #F0907F; --on-lapis: #0D1220;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px -12px rgba(0,0,0,0.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0D1220; --surface: #151B2B; --surface-2: #111727; --ink: #E7EBF4; --muted: #9AA4B8; --faint: #6E788D;
+  --line: #262F47; --lapis: #93A9FF; --lapis-soft: #1D2850; --lapis-wash: rgba(147, 169, 255, 0.08);
+  --gold: #E9B652; --gold-soft: #3A2D10; --rubric: #F0907F; --on-lapis: #0D1220;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px -12px rgba(0,0,0,0.6);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 15px/1.55 var(--f-ui);
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 20px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--lapis); outline-offset: 2px; border-radius: 4px; }
+.eyebrow { font: 600 11.5px/1.2 var(--f-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--f-mono); font-size: 12px; }
+
+/* ---------- Top bar ---------- */
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar .wrap { display: flex; align-items: center; gap: 16px; min-height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; font: 600 17px/1 var(--f-display); letter-spacing: -.01em; }
+.brand-mark { width: 28px; height: 28px; border-radius: 8px; background: var(--lapis); color: var(--on-lapis); display: grid; place-items: center; font: 700 16px/1 var(--f-greek); }
+.topnav { margin-left: auto; display: flex; gap: 4px; align-items: center; }
+.topnav a { color: var(--muted); text-decoration: none; padding: 8px 12px; border-radius: 999px; font-weight: 500; }
+.topnav a:hover { color: var(--ink); background: var(--lapis-wash); }
+.topnav .give-link { background: var(--ink); color: var(--paper); }
+.topnav .give-link:hover { background: var(--lapis); color: var(--on-lapis); }
+.pill-preview { font: 500 11px/1 var(--f-mono); color: var(--gold); border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent); padding: 5px 8px; border-radius: 999px; white-space: nowrap; }
+@media (max-width: 720px) { .topnav a:not(.give-link) { display: none; } }
+
+/* ---------- Intro ---------- */
+.intro { padding-block: 48px 28px; display: grid; gap: 14px; max-width: 760px; }
+.intro h1 { font: 500 clamp(32px, 4.6vw, 52px)/1.05 var(--f-display); letter-spacing: -.02em; }
+.intro h1 em { font-style: italic; color: var(--lapis); }
+.intro p { color: var(--muted); font-size: 17px; max-width: 60ch; }
+
+/* ---------- Favorites rail ---------- */
+.rail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.rail { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x mandatory; }
+.pcard {
+  scroll-snap-align: start; text-align: left; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: 16px 16px 14px; display: grid; gap: 8px; align-content: start;
+  transition: border-color .15s, transform .15s, background .15s;
+}
+.pcard:hover { border-color: color-mix(in srgb, var(--lapis) 45%, var(--line)); transform: translateY(-1px); }
+.pcard[aria-pressed="true"] { border-color: var(--lapis); background: var(--lapis-soft); }
+.pcard .ref { font: 500 22px/1.1 var(--f-display); letter-spacing: -.01em; }
+.pcard .theme { color: var(--muted); font-size: 13.5px; }
+.pcard .meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font: 500 11px/1 var(--f-ui); letter-spacing: .04em; padding: 5px 7px; border-radius: 999px; background: var(--lapis-wash); color: var(--muted); }
+.pcard .orig-peek { font-size: 17px; color: var(--lapis); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Passage hero ---------- */
+.hero {
+  position: relative; overflow: hidden; margin-top: 28px;
+  border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line);
+  padding: clamp(24px, 4vw, 44px);
+  display: grid; gap: 18px;
+}
+.watermark {
+  position: absolute; inset: auto -2% -18% auto; pointer-events: none; user-select: none;
+  font-size: clamp(90px, 15vw, 190px); line-height: 1; white-space: nowrap;
+  color: var(--lapis); opacity: .06;
+}
+.watermark.hebrew { inset: auto auto -18% -2%; }
+.hero > :not(.watermark) { position: relative; }
+.hero { grid-template-columns: minmax(0, 1fr); }
+.hero h2 { font: 500 clamp(40px, 6.4vw, 76px)/1 var(--f-display); letter-spacing: -.025em; }
+.hero .quote { font: 400 italic clamp(19px, 2.3vw, 26px)/1.45 var(--f-display); max-width: 46ch; }
+.hero .quote .vq { font: 600 .55em/1 var(--f-ui); font-style: normal; color: var(--lapis); vertical-align: super; margin-right: 3px; }
+.hero .src { color: var(--muted); font-size: 13px; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.stat {
+  display: inline-flex; align-items: baseline; gap: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 7px 13px;
+  font-size: 13.5px; color: var(--muted);
+}
+.stat b { font: 600 15px/1 var(--f-ui); color: var(--ink); font-variant-numeric: tabular-nums; }
+.stat:hover { border-color: var(--lapis); color: var(--ink); }
+
+/* ---------- Workspace ---------- */
+.workspace { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; margin-top: 20px; align-items: start; }
+@media (max-width: 980px) { .workspace { grid-template-columns: minmax(0, 1fr); } }
+.col { display: grid; gap: 16px; min-width: 0; }
+
+.pane { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); min-width: 0; }
+.pane-head { display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px 0; }
+.badge { font: 500 11px/1 var(--f-mono); letter-spacing: .04em; padding: 6px 8px; border-radius: var(--r-sm); background: var(--lapis-soft); color: var(--lapis); flex: none; }
+.pane-title { display: grid; gap: 2px; min-width: 0; }
+.pane-title strong { font: 600 14.5px/1.3 var(--f-ui); }
+.pane-title span { color: var(--muted); font-size: 13px; }
+.pane-body { padding: 12px 18px 18px; }
+.scripture { font: 400 20px/1.85 var(--f-text); }
+.scripture.greek { font-family: var(--f-greek); font-size: 23px; }
+.scripture.hebrew { font-family: var(--f-hebrew); font-size: 27px; line-height: 2; direction: rtl; text-align: right; }
+.vnum { font: 600 11px/1 var(--f-ui); color: var(--lapis); vertical-align: super; margin-inline: 6px 3px; direction: ltr; unicode-bidi: isolate; }
+.verse-block + .verse-block { margin-top: 4px; }
+
+.tok {
+  background: none; border: 0; padding: 0 2px; margin: 0 -2px; border-radius: 4px; cursor: pointer;
+  font: inherit; line-height: inherit; color: inherit;
+  transition: background-color .12s, box-shadow .12s, color .12s;
+}
+.tok:hover { background: var(--lapis-wash); }
+.tok.hl { background: var(--gold-soft); box-shadow: inset 0 -2px 0 var(--gold); }
+.tok.sel { background: var(--lapis); color: var(--on-lapis); box-shadow: none; }
+.tok.dim { color: var(--faint); }
+
+/* Word inspector */
+.inspector { border-top: 1px dashed var(--line); margin-top: 14px; padding-top: 14px; min-height: 92px; }
+.inspector .hint { color: var(--muted); font-size: 13.5px; display: flex; gap: 8px; align-items: center; }
+.insp-grid { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 18px; align-items: start; }
+.insp-lemma { grid-row: span 2; font-size: 34px; line-height: 1.1; color: var(--lapis); }
+.insp-lemma.hebrew { font-family: var(--f-hebrew); }
+.insp-lemma.greek { font-family: var(--f-greek); }
+.insp-gloss { font: 500 18px/1.3 var(--f-display); }
+.insp-gloss i { color: var(--muted); font-weight: 400; }
+.insp-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 500 12px/1 var(--f-mono); padding: 6px 8px; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--lapis); font-weight: 600; cursor: pointer; font-size: 13.5px; }
+.linkbtn:hover { text-decoration: underline; }
+
+.lit-dyn { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 640px) { .lit-dyn { grid-template-columns: 1fr; } }
+
+/* ---------- Resource drawer ---------- */
+.drawer { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 76px); display: grid; grid-template-rows: auto minmax(0, 1fr); max-height: calc(100vh - 96px); }
+@media (max-width: 980px) { .drawer { position: static; max-height: none; } }
+.tabs { display: flex; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tab {
+  flex: 1 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  border: 0; background: none; cursor: pointer; padding: 10px 12px; border-radius: 9px;
+  color: var(--muted); font-weight: 600; font-size: 13.5px; white-space: nowrap;
+}
+.tab .count { font: 500 11px/1 var(--f-mono); padding: 3px 6px; border-radius: 999px; background: var(--lapis-wash); font-variant-numeric: tabular-nums; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { background: var(--lapis-soft); color: var(--lapis); }
+.tab[aria-selected="true"] .count { background: var(--lapis); color: var(--on-lapis); }
+.panel { overflow-y: auto; padding: 16px 18px 20px; display: grid; gap: 12px; align-content: start; }
+.panel-intro { color: var(--muted); font-size: 13.5px; }
+
+/* Notes */
+.note { border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 16px; display: grid; gap: 10px; background: var(--surface); transition: border-color .15s, background .15s; }
+.note:hover, .note:focus-within { border-color: color-mix(in srgb, var(--gold) 60%, var(--line)); background: var(--surface-2); }
+.note-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.note-ref { font: 500 12px/1 var(--f-mono); color: var(--muted); }
+.ta-chip { margin-left: auto; border: 1px solid var(--line); background: none; cursor: pointer; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--lapis); }
+.ta-chip:hover { border-color: var(--lapis); }
+.note-quote { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.note-quote .oq { font-size: 19px; color: var(--ink); }
+.note-quote .oq.hebrew { font-family: var(--f-hebrew); font-size: 20px; }
+.note-quote .oq.greek { font-family: var(--f-greek); }
+.note-quote .eq { color: var(--muted); font: italic 400 15px/1.3 var(--f-display); }
+.note-text { font-size: 14.5px; }
+.note-text strong { font-weight: 600; background: linear-gradient(transparent 62%, var(--gold-soft) 62%); }
+.alt { border-left: 2px solid var(--lapis); padding: 2px 0 2px 12px; display: grid; gap: 2px; }
+.alt .eyebrow { font-size: 10.5px; }
+.alt q { font: italic 400 16px/1.4 var(--f-display); quotes: "“" "”"; }
+
+/* Words */
+.word-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.wchip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 12px; cursor: pointer; font-weight: 500; font-size: 13.5px; display: inline-flex; gap: 6px; align-items: center; }
+.wchip .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); }
+.wchip[data-cat="kt"] .dot { background: var(--lapis); }
+.wchip[data-cat="names"] .dot { background: var(--rubric); }
+.wchip[data-cat="other"] .dot { background: var(--gold); }
+.wchip[aria-pressed="true"] { border-color: var(--lapis); background: var(--lapis-soft); color: var(--lapis); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.legend i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.article { border: 1px solid var(--line); border-radius: var(--r-md); padding: 18px; display: grid; gap: 12px; background: var(--surface); }
+.article h3 { font: 500 26px/1.15 var(--f-display); letter-spacing: -.01em; }
+.article h4 { margin: 0; font: 600 11.5px/1.2 var(--f-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.article p, .article li { font-size: 14.5px; max-width: 62ch; }
+.article ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.refs { display: flex; flex-wrap: wrap; gap: 6px; }
+.rc { font: 400 11.5px/1.3 var(--f-mono); color: var(--faint); word-break: break-all; }
+
+/* Academy accordion */
+details.ta { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+details.ta summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; }
+details.ta summary::-webkit-details-marker { display: none; }
+details.ta summary .t { font: 500 20px/1.2 var(--f-display); }
+details.ta summary .s { color: var(--muted); font-size: 12.5px; grid-column: 1; }
+details.ta summary .chev { grid-row: 1 / span 2; grid-column: 2; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--lapis-wash); color: var(--lapis); transition: transform .2s; }
+details.ta[open] summary .chev { transform: rotate(180deg); }
+details.ta[open] { border-color: color-mix(in srgb, var(--lapis) 40%, var(--line)); }
+.ta-body { padding: 0 16px 16px; display: grid; gap: 12px; }
+.ta-body h4 { margin: 0; font: 600 11.5px/1.2 var(--f-ui); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.ta-body p, .ta-body li { font-size: 14.5px; max-width: 62ch; }
+.ta-body ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.used-in { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 12.5px; }
+
+/* Questions */
+.qa { border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; display: grid; gap: 10px; background: var(--surface); }
+.qa .q { font: 500 19px/1.35 var(--f-display); }
+.qa .a { font-size: 14.5px; color: var(--ink); border-top: 1px dashed var(--line); padding-top: 10px; }
+.qa-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.reveal { border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--lapis); }
+.reveal:hover { border-color: var(--lapis); }
+
+/* ---------- Give band & footer ---------- */
+.give { margin-top: 56px; border-radius: var(--r-lg); background: var(--lapis); color: var(--on-lapis); padding: clamp(28px, 5vw, 56px); display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 28px; align-items: end; position: relative; overflow: hidden; }
+@media (max-width: 760px) { .give { grid-template-columns: minmax(0, 1fr); } }
+.give h2 { font: 500 clamp(28px, 3.8vw, 44px)/1.08 var(--f-display); letter-spacing: -.02em; }
+.give p { opacity: .85; font-size: 16px; max-width: 54ch; margin-top: 12px; }
+.give-actions { display: grid; gap: 10px; justify-items: start; }
+.give-actions a { text-decoration: none; font-weight: 600; border-radius: 999px; padding: 13px 22px; }
+.btn-solid { background: var(--on-lapis); color: var(--lapis); }
+.btn-ghost { color: var(--on-lapis); border: 1px solid color-mix(in srgb, var(--on-lapis) 45%, transparent); }
+.give-mark { position: absolute; right: -10px; top: -40px; font: 400 220px/1 var(--f-greek); opacity: .08; pointer-events: none; }
+
+footer { padding-block: 32px 48px; color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
+footer a { color: inherit; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+<!-- ARTIFACT-HEAD-END -->
+</head>
+<body>
+<!-- ARTIFACT-BODY-START -->
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">λ</span>Verse Explorer</div>
+    <span class="pill-preview" title="Scripture and resource text on this page is sample content for the design review">Design preview</span>
+    <nav class="topnav" aria-label="Site">
+      <a href="#resources">Resources</a>
+      <a href="#about">About</a>
+      <a class="give-link" href="#give">Give</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <span class="eyebrow">Inside a Bible translation</span>
+    <h1>See what a translator sees <em>behind every verse.</em></h1>
+    <p>Translators around the world use these free resources to carry Scripture into their own languages. Pick a passage to explore the original text, two English translations, and the notes, word studies, and questions that guide the work.</p>
+  </section>
+
+  <section aria-labelledby="fav-label">
+    <div class="rail-head">
+      <span class="eyebrow" id="fav-label">Favorite passages</span>
+      <span class="mono" style="color:var(--faint)" id="rail-count"></span>
+    </div>
+    <div class="rail" id="rail"></div>
+  </section>
+
+  <section class="hero" id="hero" aria-live="polite"></section>
+
+  <section class="workspace" id="resources">
+    <div class="col" id="scripture-col"></div>
+    <aside class="pane drawer" id="drawer" aria-label="Translation resources">
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="panel" id="panel" role="tabpanel"></div>
+    </aside>
+  </section>
+
+  <section class="give" id="give">
+    <span class="give-mark" aria-hidden="true">λόγος</span>
+    <div>
+      <h2>Free, open, and ready for every language.</h2>
+      <p id="about">Every resource on this page is released under an open license (CC BY-SA 4.0). Any church or translation team can use, adapt, and share it without asking permission or paying a fee. Your gift keeps it that way.</p>
+    </div>
+    <div class="give-actions">
+      <a class="btn-solid" href="#give">Support Bible translation</a>
+      <a class="btn-ghost" href="#resources">Explore the resources</a>
+    </div>
+  </section>
+
+  <footer>
+    <span>Scripture: unfoldingWord® Literal Text, Simplified Text, Greek New Testament, and Hebrew Bible. Licensed CC BY-SA 4.0.</span>
+    <span>Resource text shown here is sample content for design review.</span>
+  </footer>
+</main>
+
+<script>
+/* ============================================================
+   DATA
+   Shaped after the Door43 resources so a live loader can replace it:
+   - orig tokens  ← UGNT / UHB USFM (\w word|lemma strong x-morph)
+   - ult          ← ULT USFM with \zaln alignments, flattened to {text|group}
+   - notes        ← tn_*.tsv  (Reference, ID, Tags, SupportReference, Quote, Occurrence, Note)
+   - words        ← twl_*.tsv (Reference, OrigWords, TWLink)
+   - questions    ← tq_*.tsv  (Reference, Question, Response)
+   ============================================================ */
+
+// Token: [word, lemma, transliteration, strong, morph, gloss, alignGroup, twId, trailingPunct]
+const T = (w, lemma, tr, s, m, g, a, tw, after) => ({ w, lemma, tr, s, m, g, a, tw: tw || null, after: after || "" });
+
+const PASSAGES = [
+  {
+    id: "john-3-16", ref: "John 3:16", book: "John", chapter: 3, theme: "God’s love for the world", lang: "greek",
+    verses: [{
+      v: 16,
+      orig: [
+        T("Οὕτως","οὕτω","houtō","G3779","Adverb","so, in this way",1),
+        T("γὰρ","γάρ","gar","G1063","Conjunction","for",2),
+        T("ἠγάπησεν","ἀγαπάω","agapaō","G25","Verb · aorist active indicative · 3rd sg","he loved",3,"love"),
+        T("ὁ","ὁ","ho","G3588","Article · nominative masc. sg","the",4),
+        T("Θεὸς","θεός","theos","G2316","Noun · nominative masc. sg","God",4,"god"),
+        T("τὸν","ὁ","ho","G3588","Article · accusative masc. sg","the",5),
+        T("κόσμον","κόσμος","kosmos","G2889","Noun · accusative masc. sg","world",5,"world",","),
+        T("ὥστε","ὥστε","hōste","G5620","Conjunction","so that, that",6),
+        T("τὸν","ὁ","ho","G3588","Article · accusative masc. sg","the, his",7),
+        T("Υἱὸν","υἱός","huios","G5207","Noun · accusative masc. sg","Son",7,"sonofgod"),
+        T("τὸν","ὁ","ho","G3588","Article · accusative masc. sg","the",8),
+        T("μονογενῆ","μονογενής","monogenēs","G3439","Adjective · accusative masc. sg","one and only, unique",8),
+        T("ἔδωκεν","δίδωμι","didōmi","G1325","Verb · aorist active indicative · 3rd sg","he gave",9,null,","),
+        T("ἵνα","ἵνα","hina","G2443","Conjunction","so that",10),
+        T("πᾶς","πᾶς","pas","G3956","Adjective · nominative masc. sg","everyone, all",11),
+        T("ὁ","ὁ","ho","G3588","Article · nominative masc. sg","the",11),
+        T("πιστεύων","πιστεύω","pisteuō","G4100","Verb · present active participle · nom. masc. sg","believing",11,"believe"),
+        T("εἰς","εἰς","eis","G1519","Preposition","in, into",12),
+        T("αὐτὸν","αὐτός","autos","G846","Pronoun · accusative masc. sg","him",12),
+        T("μὴ","μή","mē","G3361","Particle","not",13),
+        T("ἀπόληται","ἀπόλλυμι","apollymi","G622","Verb · aorist middle subjunctive · 3rd sg","he would perish",13,"perish",","),
+        T("ἀλλ’","ἀλλά","alla","G235","Conjunction","but",14),
+        T("ἔχῃ","ἔχω","echō","G2192","Verb · present active subjunctive · 3rd sg","he would have",15),
+        T("ζωὴν","ζωή","zōē","G2222","Noun · accusative fem. sg","life",16,"life"),
+        T("αἰώνιον","αἰώνιος","aiōnios","G166","Adjective · accusative fem. sg","eternal",16,"eternity","."),
+      ],
+      ult: "{For|2} {God|4} {so|1} {loved|3} {the world|5}, {that|6} {he gave|9} {his|7} {One and Only|8} {Son|7}, {so that|10} {everyone believing|11} {in him|12} {would not perish|13} {but|14} {would have|15} {eternal life|16}.",
+      ust: "God loved the people in the world so much that he gave his only Son, so that everyone who trusts in him would not be separated from God forever but would live with him forever.",
+    }],
+    notes: [
+      { v:16, quote:"τὸν κόσμον", groups:[5], en:"the world", ta:"figs-metonymy",
+        text:"Here, **the world** represents all the people who live in the world. If it would be helpful in your language, you could express the meaning plainly.", alt:"the people of the world" },
+      { v:16, quote:"τὸν Υἱὸν", groups:[7], en:"Son", ta:"guidelines-sonofgodprinciples",
+        text:"**Son** is an important title for Jesus that describes his relationship to God the Father. Translate it with the ordinary word your language uses for a son." },
+      { v:16, quote:"τὸν μονογενῆ", groups:[8], en:"One and Only", ta:"figs-explicit",
+        text:"The phrase **One and Only** describes Jesus as unique. No one else is God’s Son in the way that Jesus is. Express this in a way that does not suggest God has other sons like him.", alt:"his only Son" },
+      { v:16, quote:"μὴ ἀπόληται", groups:[13], en:"would not perish", ta:"figs-explicit",
+        text:"Here, **perish** refers to spiritual death, which means being separated from God forever. It does not refer to physical death. If it would be helpful, you could state this explicitly.", alt:"would not be separated from God forever" },
+      { v:16, quote:"ζωὴν αἰώνιον", groups:[16], en:"eternal life", ta:"figs-abstractnouns",
+        text:"If your language does not use an abstract noun for the idea of **life**, you could express the same idea with a verb such as “live.”", alt:"would live forever" },
+    ],
+    words: [ ["love",[3]], ["god",[4]], ["world",[5]], ["sonofgod",[7]], ["believe",[11]], ["perish",[13]], ["life",[16]], ["eternity",[16]] ],
+    questions: [
+      { v:16, q:"Why did God give his One and Only Son?", a:"God gave his One and Only Son because he loved the world." },
+      { v:16, q:"What will happen to everyone who believes in God’s One and Only Son?", a:"Everyone who believes in God’s One and Only Son will not perish but will have eternal life." },
+    ],
+  },
+  {
+    id: "psalm-23-1-2", ref: "Psalm 23:1–2", book: "Psalms", chapter: 23, theme: "The Lord is my shepherd", lang: "hebrew",
+    verses: [
+      { v: 1,
+        orig: [
+          T("מִזְמ֥וֹר","מִזְמוֹר","mizmor","H4210","Noun · masc. sg","psalm, song",1,"psalm"),
+          T("לְדָוִ֑ד","דָּוִד","ledavid","l:H1732","Preposition + proper noun","of David, for David",2,"david"),
+          T("יְהוָ֥ה","יְהוָה","YHWH","H3068","Proper noun","Yahweh",3,"yahweh"),
+          T("רֹ֝עִ֗י","רָעָה","ro‘i","H7462","Verb · qal participle · masc. sg + 1st sg suffix","my shepherd",4,"shepherd"),
+          T("לֹ֣א","לֹא","lo","H3808","Negative particle","not",5),
+          T("אֶחְסָֽר","חָסֵר","echsar","H2637","Verb · qal imperfect · 1st sg","I will lack",6,null,"׃"),
+        ],
+        ult: "{A psalm|1} {of David|2}. {Yahweh|3} is {my shepherd|4}; {I will lack|6} {nothing|5}.",
+        ust: "This is a psalm that David wrote. Yahweh takes care of me as a shepherd takes care of his sheep, so I have everything that I need.",
+      },
+      { v: 2,
+        orig: [
+          T("בִּנְא֣וֹת","נָאָה","bin’ot","b:H4999","Preposition + noun · fem. pl construct","in pastures of",1),
+          T("דֶּ֭שֶׁא","דֶּשֶׁא","deshe","H1877","Noun · masc. sg","green grass",2),
+          T("יַרְבִּיצֵ֑נִי","רָבַץ","yarbitseni","H7257","Verb · hiphil imperfect · 3rd masc. sg + 1st sg suffix","he makes me lie down",3),
+          T("עַל־","עַל","al","H5921","Preposition","beside, by",4),
+          T("מֵ֖י","מַיִם","mei","H4325","Noun · masc. pl construct","waters of",5),
+          T("מְנֻח֣וֹת","מְנוּחָה","menuchot","H4496","Noun · fem. pl","rest, tranquility",6),
+          T("יְנַהֲלֵֽנִי","נָהַל","yenahaleni","H5095","Verb · piel imperfect · 3rd masc. sg + 1st sg suffix","he leads me",7,null,"׃"),
+        ],
+        ult: "{He makes me lie down|3} {in|1} {green|2} {pastures|1}; {he leads me|7} {beside|4} {tranquil|6} {waters|5}.",
+        ust: "He lets me rest in fields of green grass, and he leads me to calm water where I can drink.",
+      },
+    ],
+    notes: [
+      { v:1, quote:"מִזְמ֥וֹר לְדָוִ֑ד", groups:[1,2], en:"A psalm of David",
+        text:"This is the title of the psalm. The phrase **of David** could mean: (1) David wrote this psalm. (2) The psalm is about David. (3) The psalm was written in the style of David’s psalms." },
+      { v:1, quote:"יְהוָ֥ה רֹ֝עִ֗י", groups:[3,4], en:"Yahweh is my shepherd", ta:"figs-metaphor",
+        text:"David speaks of **Yahweh** as if he were a **shepherd** who takes care of his sheep. If it would be helpful in your language, you could express this as a simile.", alt:"Yahweh takes care of me as a shepherd takes care of his sheep" },
+      { v:1, quote:"לֹ֣א אֶחְסָֽר", groups:[5,6], en:"I will lack nothing", ta:"figs-explicit",
+        text:"The implication is that Yahweh provides everything that David needs. You could state this positively if that would be clearer in your language.", alt:"I have everything I need" },
+      { v:2, quote:"בִּנְא֣וֹת דֶּ֭שֶׁא יַרְבִּיצֵ֑נִי", groups:[1,2,3], en:"He makes me lie down in green pastures", ta:"figs-metaphor",
+        text:"David continues the shepherd metaphor. A good shepherd leads his sheep to **green pastures** where they can eat and rest. This represents Yahweh giving David rest and everything he needs.", alt:"He gives me rest, as a shepherd lets his sheep lie down in green pastures" },
+      { v:2, quote:"מֵ֖י מְנֻח֣וֹת", groups:[5,6], en:"tranquil waters", ta:"figs-explicit",
+        text:"**Tranquil waters** are calm, still waters where sheep can drink safely. Sheep are afraid to drink from fast-moving water.", alt:"calm water" },
+    ],
+    words: [ ["psalm",[1],1], ["david",[2],1], ["yahweh",[3],1], ["shepherd",[4],1] ],
+    questions: [
+      { v:1, q:"Who does David say is his shepherd?", a:"David says that Yahweh is his shepherd." },
+      { v:1, q:"What does David say he will lack?", a:"David says that he will lack nothing." },
+      { v:2, q:"Where does Yahweh lead David?", a:"Yahweh makes him lie down in green pastures and leads him beside tranquil waters." },
+    ],
+  },
+  {
+    id: "philippians-4-13", ref: "Philippians 4:13", book: "Philippians", chapter: 4, theme: "Strength in Christ", lang: "greek",
+    verses: [{
+      v: 13,
+      orig: [
+        T("πάντα","πᾶς","pas","G3956","Adjective · accusative neut. pl","all things",2),
+        T("ἰσχύω","ἰσχύω","ischyō","G2480","Verb · present active indicative · 1st sg","I am able, I can",1),
+        T("ἐν","ἐν","en","G1722","Preposition","in, by",3),
+        T("τῷ","ὁ","ho","G3588","Article · dative masc. sg","the one",4),
+        T("ἐνδυναμοῦντί","ἐνδυναμόω","endynamoō","G1743","Verb · present active participle · dat. masc. sg","who strengthens",4,"power"),
+        T("με","ἐγώ","egō","G1473","Pronoun · accusative 1st sg","me",5,null,"."),
+      ],
+      ult: "{I can do|1} {all things|2} {in|3} {the one who strengthens|4} {me|5}.",
+      ust: "I can endure all these situations because Christ gives me the strength to do so.",
+    }],
+    notes: [
+      { v:13, quote:"πάντα", groups:[2], en:"all things", ta:"figs-explicit",
+        text:"Here, **all things** refers to all the situations Paul described in the previous verse: having plenty and having little, being well fed and being hungry. It does not mean Paul can do anything at all.", alt:"all these things" },
+      { v:13, quote:"ἐν τῷ ἐνδυναμοῦντί με", groups:[3,4,5], en:"in the one who strengthens me", ta:"figs-explicit",
+        text:"**The one who strengthens me** refers to Christ. It may be helpful to state this clearly in your translation.", alt:"through Christ, who gives me strength" },
+    ],
+    words: [ ["power",[4]], ["christ",[]] ],
+    questions: [
+      { v:13, q:"How is Paul able to do all things?", a:"Paul can do all things through Christ, who strengthens him." },
+    ],
+  },
+  {
+    id: "genesis-1-1", ref: "Genesis 1:1", book: "Genesis", chapter: 1, theme: "In the beginning", lang: "hebrew",
+    verses: [{
+      v: 1,
+      orig: [
+        T("בְּרֵאשִׁ֖ית","רֵאשִׁית","bereshit","b:H7225","Preposition + noun · fem. sg","in the beginning",1),
+        T("בָּרָ֣א","בָּרָא","bara","H1254","Verb · qal perfect · 3rd masc. sg","he created",2,"create"),
+        T("אֱלֹהִ֑ים","אֱלֹהִים","elohim","H430","Noun · masc. pl","God",3,"god"),
+        T("אֵ֥ת","אֵת","et","H853","Object marker","(marks what follows as the object)",0),
+        T("הַשָּׁמַ֖יִם","שָׁמַיִם","hashamayim","d:H8064","Article + noun · masc. pl","the heavens",4,"heaven"),
+        T("וְאֵ֥ת","אֵת","ve’et","c:H853","Conjunction + object marker","and",5),
+        T("הָאָֽרֶץ","אֶרֶץ","ha’arets","d:H776","Article + noun · fem. sg","the earth",6,"earth","׃"),
+      ],
+      ult: "{In the beginning|1}, {God|3} {created|2} {the heavens|4} {and|5} {the earth|6}.",
+      ust: "In the beginning, God created everything that exists, including the heavens and the earth.",
+    }],
+    notes: [
+      { v:1, quote:"בְּרֵאשִׁ֖ית", groups:[1], en:"In the beginning", ta:"figs-explicit",
+        text:"**In the beginning** refers to the start of the world, before anything else existed.", alt:"Long ago, before anything else existed" },
+      { v:1, quote:"בָּרָ֣א", groups:[2], en:"created",
+        text:"In the Bible, the word translated **created** is used only for what God does. It describes God making something that did not exist before." },
+      { v:1, quote:"אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ", groups:[4,5,6], en:"the heavens and the earth", ta:"figs-merism",
+        text:"The phrase **the heavens and the earth** is a merism. It names two opposite parts in order to refer to everything. If your language does not use this figure of speech, you could say it plainly.", alt:"everything that exists" },
+    ],
+    words: [ ["god",[3]], ["create",[2]], ["heaven",[4]], ["earth",[6]] ],
+    questions: [
+      { v:1, q:"What did God create in the beginning?", a:"In the beginning God created the heavens and the earth." },
+    ],
+  },
+];
+
+/* Translation Words (tW) — keyed by article id; cat = kt | names | other */
+const TW = {
+  love: { title:"love, beloved", cat:"kt",
+    def:"To love someone is to care for that person and do things that benefit them. The love that comes from God is focused on the good of others, even when it costs the one who loves.",
+    sugg:"Unless the context indicates otherwise, “love” can be translated as “unselfish caring” or “committed care.” Some languages have a special word for the unselfish, sacrificial love that comes from God.",
+    refs:["1 Corinthians 13:4","1 John 4:8","John 3:16","Romans 5:8"] },
+  god: { title:"God", cat:"kt",
+    def:"In the Bible, “God” refers to the eternal being who created the universe out of nothing. God exists as Father, Son, and Holy Spirit. God’s personal name is “Yahweh.”",
+    sugg:"Ways to translate “God” could include “Deity,” “Creator,” or “Supreme Being.” Consider how the term is translated in a local or national language Bible.",
+    refs:["Genesis 1:1","Psalm 46:1","John 1:1","Romans 1:20"] },
+  world: { title:"world, worldly", cat:"kt",
+    def:"“World” usually refers to the part of the universe where people live: the earth. It can also refer to the people who live in it, or to the values of a society that does not honor God.",
+    sugg:"Depending on the context, “world” could be translated as “the people of the world,” “the earth,” or “the ways of people who do not follow God.”",
+    refs:["John 1:10","John 3:16","1 John 2:15"] },
+  sonofgod: { title:"Son of God, the Son", cat:"kt",
+    def:"“Son of God” refers to Jesus, the Word of God, who came into the world as a human being. He is often called “the Son.”",
+    sugg:"Translate “Son” with the common word a language uses for a human son. Make sure the word for “son” fits with the word used for “father.”",
+    refs:["Matthew 3:17","John 3:16","Romans 1:4"] },
+  believe: { title:"believe, believer, belief", cat:"kt",
+    def:"To believe something is to accept that it is true. To believe in someone is to trust that person: to trust that he is who he says he is and will do what he has promised.",
+    sugg:"“Believe in” could be translated as “trust in” or “have faith in.” A “believer” could be “a person who trusts in Jesus.”",
+    refs:["John 3:16","Acts 16:31","Romans 10:9"] },
+  perish: { title:"perish, perishing", cat:"other",
+    def:"To perish means to die or stop existing. In the Bible it often has the special meaning of being punished forever, separated from God.",
+    sugg:"In contexts like John 3:16, use a term that means “be separated from God forever” rather than a word that only means physical death.",
+    refs:["John 3:16","1 Corinthians 1:18","2 Peter 3:9"] },
+  life: { title:"life, live, living", cat:"kt",
+    def:"Physical life is the life of the body. Spiritual life is the life God gives to people who believe in Jesus, which lasts forever.",
+    sugg:"Depending on the context, “life” could be translated as “existence” or “living.” “Eternal life” could be “living forever with God.”",
+    refs:["John 1:4","John 3:16","John 14:6"] },
+  eternity: { title:"eternity, eternal, forever", cat:"kt",
+    def:"Something eternal will always exist and never ends. “Eternal life” means living forever with God.",
+    sugg:"Other ways to translate “eternal” could include “never-ending” or “continuing without end.”",
+    refs:["Psalm 90:2","John 3:16","Romans 6:23"] },
+  psalm: { title:"psalm", cat:"other",
+    def:"A psalm is a sacred song, often written as a poem to be sung. The book of Psalms is a collection of these songs.",
+    sugg:"“Psalm” could be translated as “sacred song” or “song of praise to God.”",
+    refs:["Psalm 23:1","Colossians 3:16"] },
+  david: { title:"David", cat:"names",
+    def:"David was the second king of Israel. He loved and served God, and he wrote many of the songs in the book of Psalms.",
+    sugg:"Spell the name the way it sounds in your language. See “How to Translate Names.”",
+    refs:["1 Samuel 16:13","Psalm 23:1","Acts 13:22"] },
+  yahweh: { title:"Yahweh", cat:"kt",
+    def:"“Yahweh” is God’s personal name, which he revealed to Moses at the burning bush. It is related to the Hebrew word that means “to be.”",
+    sugg:"Many Bible translations write “the LORD.” These resources use “Yahweh” to reflect the original text. Consider how the name is written in a national language Bible.",
+    refs:["Exodus 3:14","Psalm 23:1","Isaiah 40:28"] },
+  shepherd: { title:"shepherd", cat:"other",
+    def:"A shepherd takes care of sheep. He protects them, leads them to food and water, and keeps them from getting lost. In the Bible, God is called the shepherd of his people.",
+    sugg:"If sheep are not known in your area, translate with a phrase that means “a person who takes care of animals.”",
+    refs:["Psalm 23:1","Isaiah 40:11","John 10:11"] },
+  power: { title:"power, strength", cat:"kt",
+    def:"“Power” is the ability to do things or make things happen. God’s power makes it possible for believers to do what they could not do on their own.",
+    sugg:"Depending on the context, “power” could be translated as “ability” or “strength.” “Strengthen” could be “make strong” or “give strength to.”",
+    refs:["Philippians 4:13","Ephesians 3:16","Isaiah 40:29"] },
+  christ: { title:"Christ, Messiah", cat:"kt",
+    def:"“Messiah” and “Christ” both mean “Anointed One.” They refer to Jesus, whom God chose and sent to save his people.",
+    sugg:"This could be translated as “the Anointed One” or “God’s chosen Savior.” Many languages use a transliteration of “Christ.”",
+    refs:["Matthew 16:16","John 1:41","Philippians 4:13"] },
+  create: { title:"create, creation, Creator", cat:"other",
+    def:"To create means to make something. In the Bible it often refers to God making everything that exists, from nothing.",
+    sugg:"“Create” could be translated as “make” or “cause to exist.” “Creator” could be “the one who made everything.”",
+    refs:["Genesis 1:1","Psalm 51:10","Colossians 1:16"] },
+  heaven: { title:"heaven, sky, heavenly", cat:"kt",
+    def:"“Heaven” refers to the place where God lives. The same word can also mean “sky,” the space above the earth with the sun, moon, and stars.",
+    sugg:"Depending on the context, translate as “sky” or as “the place where God lives.” In “the heavens and the earth,” it refers to everything above the earth.",
+    refs:["Genesis 1:1","Psalm 19:1","Matthew 6:9"] },
+  earth: { title:"earth, earthly", cat:"other",
+    def:"“Earth” refers to the world that people live on, along with all other forms of life. It can also mean the ground or soil.",
+    sugg:"“Earth” could be translated as “world” or “land,” depending on the context.",
+    refs:["Genesis 1:1","Psalm 24:1","Matthew 5:5"] },
+};
+
+/* Translation Academy (tA) — keyed by SupportReference slug */
+const TA = {
+  "figs-metonymy": { title:"Metonymy", section:"Figures of Speech",
+    desc:"Metonymy is a figure of speech in which a thing or idea is called by the name of something closely associated with it, instead of by its own name.",
+    why:"The Bible uses metonymy very often. Some languages do not use it, and readers may not recognize what the associated word stands for.",
+    steps:["If people would understand the metonymy, keep it.","If not, use the name of the thing that the metonym represents.","Or keep the metonym and add the thing it represents, such as “the world, that is, the people in it.”"] },
+  "guidelines-sonofgodprinciples": { title:"Translating Son and Father", section:"Translation Guidelines",
+    desc:"“Father” and “Son” are titles that God uses for himself in the Bible. They describe the eternal relationship between God the Father and Jesus, God the Son.",
+    why:"Some translators want to avoid these words because they might suggest physical birth. But the Bible chose these words on purpose, so they should be kept.",
+    steps:["Use the ordinary word your language uses for a human son.","Make sure “Son” and “Father” fit together as a pair.","If needed, explain the meaning in a footnote instead of replacing the title."] },
+  "figs-explicit": { title:"Assumed Knowledge and Implicit Information", section:"Figures of Speech",
+    desc:"Assumed knowledge is what a speaker expects the audience already knows. Implicit information is what the speaker communicates without stating it directly.",
+    why:"Readers today may not share the knowledge of the original audience, so they may miss what the author meant.",
+    steps:["If readers would understand, translate it as it is.","If not, state the implicit information clearly, as long as it does not distort the message.","Use a footnote for background that would be awkward in the text."] },
+  "figs-abstractnouns": { title:"Abstract Nouns", section:"Figures of Speech",
+    desc:"Abstract nouns name ideas that cannot be seen or touched, such as joy, peace, or life.",
+    why:"Some languages do not use abstract nouns, or use them less often than the Bible does.",
+    steps:["Reword the sentence with a verb or adjective that expresses the same idea.","Use a phrase that describes how something happens."] },
+  "figs-metaphor": { title:"Metaphor", section:"Figures of Speech",
+    desc:"A metaphor speaks of one thing as if it were a different thing, in order to show a quality they share.",
+    why:"Readers may not recognize that something is a metaphor, or may not know which quality is being compared.",
+    steps:["If the metaphor would be understood, keep it.","Change it to a simile by adding “like” or “as.”","State the meaning plainly if the image would be confusing."] },
+  "figs-merism": { title:"Merism", section:"Figures of Speech",
+    desc:"Merism refers to something by naming two opposite or extreme parts of it. Together, the two parts stand for the whole.",
+    why:"Some languages do not use merism, and readers may think that only the two named parts are meant.",
+    steps:["If merism is natural in your language, keep it.","Name the whole thing that the two parts represent.","Keep the two parts and add a word like “all” or “everything.”"] },
+};
+
+const LANG = {
+  greek:  { badge:"UGNT", name:"Greek New Testament", sub:"The original language text, word by word" },
+  hebrew: { badge:"UHB",  name:"Hebrew Bible",        sub:"The original language text, word by word (read right to left)" },
+};
+const CAT_LABEL = { kt:"Key term", names:"Name", other:"Other term" };
+
+/* ============================================================
+   RENDERING
+   ============================================================ */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+const chapterRef = (p, v) => `${p.chapter}:${v}`;
+
+const state = { pid: PASSAGES[0].id, tab: "notes", word: null, sel: null, hover: [] };
+const passage = () => PASSAGES.find(p => p.id === state.pid);
+const taIds = p => [...new Set(p.notes.map(n => n.ta).filter(Boolean))];
+
+function renderRail() {
+  $("#rail-count").textContent = `${PASSAGES.length} passages`;
+  $("#rail").innerHTML = PASSAGES.map(p => {
+    const peek = p.verses[0].orig.slice(0, 4).map(t => t.w).join(" ");
+    return `<button class="pcard" data-pid="${p.id}" aria-pressed="${p.id === state.pid}">
+      <span class="ref">${esc(p.ref)}</span>
+      <span class="theme">${esc(p.theme)}</span>
+      <span class="orig-peek ${p.lang}" dir="${p.lang === "hebrew" ? "rtl" : "ltr"}" style="font-family:var(--f-${p.lang})">${esc(peek)}</span>
+      <span class="meta"><span class="tag">${p.lang === "greek" ? "New Testament · Greek" : "Old Testament · Hebrew"}</span></span>
+    </button>`;
+  }).join("");
+}
+
+function plainUlt(s) { return s.replace(/\{([^|}]+)\|\d+\}/g, "$1"); }
+
+function renderHero(p) {
+  const water = p.verses.flatMap(v => v.orig.map(t => t.w)).join(" ");
+  const quote = p.verses.map(v => (p.verses.length > 1 ? `<span class="vq">${v.v}</span>` : "") + esc(plainUlt(v.ult))).join(" ");
+  const counts = [
+    ["notes", p.notes.length, "translation notes"],
+    ["words", p.words.length, "key words"],
+    ["academy", taIds(p).length, "academy articles"],
+    ["questions", p.questions.length, "questions"],
+  ];
+  $("#hero").innerHTML = `
+    <div class="watermark ${p.lang}" aria-hidden="true" style="font-family:var(--f-${p.lang})" dir="${p.lang === "hebrew" ? "rtl" : "ltr"}">${esc(water)}</div>
+    <span class="eyebrow">${esc(p.book)} · Chapter ${p.chapter}</span>
+    <h2>${esc(p.ref)}</h2>
+    <p class="quote">“${quote}”</p>
+    <p class="src">unfoldingWord® Literal Text</p>
+    <div class="stats">${counts.map(([tab, n, label]) =>
+      `<button class="stat" data-goto="${tab}"><b>${n}</b>${label}</button>`).join("")}</div>`;
+}
+
+function renderOrig(p) {
+  const dir = p.lang === "hebrew" ? "rtl" : "ltr";
+  return p.verses.map(v => `<span class="verse-block"><span class="vnum">${v.v}</span>${v.orig.map((t, i) => {
+    const sp = t.w.endsWith("־") ? "" : " ";
+    return `<button class="tok${t.a === 0 ? " dim" : ""}" data-g="${v.v}:${t.a}" data-i="${v.v}:${i}" lang="${p.lang === "greek" ? "grc" : "hbo"}">${esc(t.w)}</button>${esc(t.after)}${sp}`;
+  }).join("")}</span>`).join(dir === "rtl" ? " " : " ");
+}
+
+function renderUlt(p) {
+  return p.verses.map(v => `<span class="verse-block"><span class="vnum">${v.v}</span>${
+    esc(v.ult).replace(/\{([^|}]+)\|(\d+)\}/g, (_, t, a) => `<span class="tok tok-en" tabindex="0" data-g="${v.v}:${a}">${t}</span>`)
+  }</span>`).join(" ");
+}
+
+function renderUst(p) {
+  return p.verses.map(v => `<span class="verse-block"><span class="vnum">${v.v}</span>${esc(v.ust)}</span>`).join(" ");
+}
+
+function renderScripture(p) {
+  const L = LANG[p.lang];
+  $("#scripture-col").innerHTML = `
+    <article class="pane">
+      <div class="pane-head"><span class="badge">${L.badge}</span>
+        <div class="pane-title"><strong>${L.name}</strong><span>${L.sub}</span></div></div>
+      <div class="pane-body">
+        <div class="scripture ${p.lang}" dir="${p.lang === "hebrew" ? "rtl" : "ltr"}">${renderOrig(p)}</div>
+        <div class="inspector" id="inspector"></div>
+      </div>
+    </article>
+    <div class="lit-dyn">
+      <article class="pane">
+        <div class="pane-head"><span class="badge">ULT</span>
+          <div class="pane-title"><strong>Literal Text</strong><span>Follows the form of the original closely</span></div></div>
+        <div class="pane-body"><div class="scripture">${renderUlt(p)}</div></div>
+      </article>
+      <article class="pane">
+        <div class="pane-head"><span class="badge">UST</span>
+          <div class="pane-title"><strong>Simplified Text</strong><span>Expresses the meaning in plain language</span></div></div>
+        <div class="pane-body"><div class="scripture">${renderUst(p)}</div></div>
+      </article>
+    </div>`;
+  renderInspector();
+}
+
+function findToken(p, key) {
+  const [v, i] = key.split(":").map(Number);
+  const verse = p.verses.find(x => x.v === v);
+  return verse && verse.orig[i];
+}
+
+function renderInspector() {
+  const p = passage(), box = $("#inspector");
+  if (!box) return;
+  const t = state.sel && findToken(p, state.sel);
+  if (!t) {
+    box.innerHTML = `<p class="hint"><span class="chip">Tip</span>Select any word to see its dictionary form, meaning, and grammar. Matching English words light up below.</p>`;
+    return;
+  }
+  const tw = t.tw && TW[t.tw];
+  box.innerHTML = `<div class="insp-grid">
+    <div class="insp-lemma ${p.lang}" dir="${p.lang === "hebrew" ? "rtl" : "ltr"}">${esc(t.lemma)}</div>
+    <div class="insp-gloss">${esc(t.g)} <i>· ${esc(t.tr)}</i></div>
+    <div class="insp-meta">
+      <span class="chip" title="Strong’s number">${esc(t.s)}</span>
+      <span>${esc(t.m)}</span>
+      ${tw ? `<button class="linkbtn" data-word="${t.tw}">Read “${esc(tw.title.split(",")[0])}” in Translation Words →</button>` : ""}
+    </div>
+  </div>`;
+}
+
+function renderTabs(p) {
+  const tabs = [
+    ["notes", "Notes", p.notes.length],
+    ["words", "Words", p.words.length],
+    ["academy", "Academy", taIds(p).length],
+    ["questions", "Questions", p.questions.length],
+  ];
+  $("#tabs").innerHTML = tabs.map(([id, label, n]) =>
+    `<button class="tab" role="tab" id="tab-${id}" data-tab="${id}" aria-selected="${state.tab === id}" aria-controls="panel">${label}<span class="count">${n}</span></button>`).join("");
+  $("#panel").setAttribute("aria-labelledby", `tab-${state.tab}`);
+}
+
+function renderPanel(p) {
+  const panel = $("#panel");
+  const groupKeys = (v, gs) => gs.map(g => `${v}:${g}`).join(" ");
+  const multi = p.verses.length > 1;
+
+  if (state.tab === "notes") {
+    panel.innerHTML = `<p class="panel-intro">Translation Notes explain words and phrases that may be hard to translate. Hover a note to find its words in the text.</p>` +
+      p.notes.map(n => `<article class="note" tabindex="0" data-groups="${groupKeys(n.v, n.groups)}">
+        <div class="note-top"><span class="note-ref">${chapterRef(p, n.v)}</span>
+          ${n.ta ? `<button class="ta-chip" data-ta="${n.ta}">${esc(TA[n.ta].title)}</button>` : ""}</div>
+        <div class="note-quote"><span class="oq ${p.lang}" dir="${p.lang === "hebrew" ? "rtl" : "ltr"}">${esc(n.quote)}</span><span class="eq">${esc(n.en)}</span></div>
+        <p class="note-text">${md(n.text)}</p>
+        ${n.alt ? `<div class="alt"><span class="eyebrow">Alternate translation</span><q>${esc(n.alt)}</q></div>` : ""}
+      </article>`).join("");
+  }
+
+  if (state.tab === "words") {
+    const ids = p.words.map(w => w[0]);
+    if (!ids.includes(state.word)) state.word = ids[0];
+    const w = TW[state.word];
+    const entry = p.words.find(x => x[0] === state.word);
+    const v = entry[2] || p.verses[0].v;
+    panel.innerHTML = `<p class="panel-intro">Translation Words define the important terms in this passage and suggest ways to translate them.</p>
+      <div class="word-list">${p.words.map(([id, gs, wv]) =>
+        `<button class="wchip" data-cat="${TW[id].cat}" data-word="${id}" data-groups="${groupKeys(wv || p.verses[0].v, gs)}" aria-pressed="${id === state.word}"><span class="dot"></span>${esc(TW[id].title.split(",")[0])}</button>`).join("")}</div>
+      <div class="legend"><span><i style="background:var(--lapis)"></i>Key term</span><span><i style="background:var(--rubric)"></i>Name</span><span><i style="background:var(--gold)"></i>Other term</span></div>
+      <article class="article" data-groups="${groupKeys(v, entry[1])}">
+        <span class="eyebrow">${CAT_LABEL[w.cat]}</span>
+        <h3>${esc(w.title)}</h3>
+        <h4>Definition</h4><p>${esc(w.def)}</p>
+        <h4>Translation suggestions</h4><p>${esc(w.sugg)}</p>
+        <h4>Where else it appears</h4>
+        <div class="refs">${w.refs.map(r => `<span class="chip">${esc(r)}</span>`).join("")}</div>
+        <span class="rc">rc://*/tw/dict/bible/${w.cat}/${state.word}</span>
+      </article>`;
+  }
+
+  if (state.tab === "academy") {
+    const ids = taIds(p);
+    panel.innerHTML = `<p class="panel-intro">Translation Academy teaches the principles behind the notes, so translators can recognize the same issue anywhere in the Bible.</p>` +
+      ids.map((id, i) => {
+        const a = TA[id];
+        const used = p.notes.filter(n => n.ta === id);
+        return `<details class="ta" id="ta-${id}" ${i === 0 || state.openTa === id ? "open" : ""}>
+          <summary><span class="t">${esc(a.title)}</span><span class="s">${esc(a.section)}</span>
+            <span class="chev" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
+          <div class="ta-body">
+            <h4>Description</h4><p>${esc(a.desc)}</p>
+            <h4>Why this is a translation issue</h4><p>${esc(a.why)}</p>
+            <h4>Translation strategies</h4><ol>${a.steps.map(s => `<li>${esc(s)}</li>`).join("")}</ol>
+            <div class="used-in">Used in this passage for ${used.map(n => `<span class="chip">${esc(n.en)}</span>`).join("")}</div>
+            <span class="rc">rc://*/ta/man/translate/${id}</span>
+          </div>
+        </details>`;
+      }).join("");
+    state.openTa = null;
+  }
+
+  if (state.tab === "questions") {
+    panel.innerHTML = `<p class="panel-intro">Translation Questions help a team check that a draft communicates the meaning clearly. Try answering before you reveal.</p>` +
+      p.questions.map((q, i) => `<article class="qa">
+        <span class="note-ref">${chapterRef(p, q.v)}</span>
+        <p class="q">${esc(q.q)}</p>
+        <p class="a" id="ans-${i}" hidden>${esc(q.a)}</p>
+        <div class="qa-foot"><span></span><button class="reveal" data-ans="${i}" aria-expanded="false" aria-controls="ans-${i}">Show answer</button></div>
+      </article>`).join("");
+  }
+  panel.scrollTop = 0;
+}
+
+/* ---------- Highlighting ---------- */
+function paint() {
+  document.querySelectorAll(".tok.hl, .tok.sel").forEach(el => el.classList.remove("hl", "sel"));
+  const keys = new Set(state.hover);
+  if (state.sel) {
+    const t = findToken(passage(), state.sel);
+    const v = state.sel.split(":")[0];
+    if (t) keys.add(`${v}:${t.a}`);
+    const selEl = document.querySelector(`.tok[data-i="${state.sel}"]`);
+    if (selEl) selEl.classList.add("sel");
+  }
+  keys.forEach(k => {
+    if (k.endsWith(":0")) return;
+    document.querySelectorAll(`.tok[data-g="${k}"]`).forEach(el => { if (!el.classList.contains("sel")) el.classList.add("hl"); });
+  });
+}
+
+/* ---------- Render all ---------- */
+function render() {
+  const p = passage();
+  renderRail(); renderHero(p); renderScripture(p); renderTabs(p); renderPanel(p); paint();
+}
+
+function selectPassage(id) {
+  if (!PASSAGES.some(p => p.id === id) || id === state.pid) return;
+  state.pid = id; state.sel = null; state.word = null; state.hover = [];
+  try { history.replaceState(null, "", "#" + id); } catch (e) {}
+  render();
+}
+
+function setTab(tab) {
+  state.tab = tab;
+  const p = passage();
+  renderTabs(p); renderPanel(p);
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("click", e => {
+  const card = e.target.closest(".pcard");
+  if (card) return selectPassage(card.dataset.pid);
+
+  const go = e.target.closest("[data-goto]");
+  if (go) { setTab(go.dataset.goto); $("#resources").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+
+  const tab = e.target.closest(".tab");
+  if (tab) return setTab(tab.dataset.tab);
+
+  const taBtn = e.target.closest("[data-ta]");
+  if (taBtn) { state.openTa = taBtn.dataset.ta; setTab("academy"); const d = $(`#ta-${taBtn.dataset.ta}`); if (d) { d.open = true; d.scrollIntoView({ block: "nearest" }); } return; }
+
+  const wordBtn = e.target.closest("[data-word]");
+  if (wordBtn) { state.word = wordBtn.dataset.word; setTab("words"); return; }
+
+  const rev = e.target.closest(".reveal");
+  if (rev) {
+    const a = $(`#ans-${rev.dataset.ans}`); a.hidden = !a.hidden;
+    rev.textContent = a.hidden ? "Show answer" : "Hide answer";
+    rev.setAttribute("aria-expanded", String(!a.hidden));
+    return;
+  }
+
+  const tok = e.target.closest(".tok");
+  if (tok) {
+    let key = tok.dataset.i;
+    if (!key) { // English word → first aligned original word
+      const match = document.querySelector(`.tok[data-i][data-g="${tok.dataset.g}"]`);
+      key = match && match.dataset.i;
+    }
+    state.sel = key && key !== state.sel ? key : null;
+    renderInspector(); paint();
+  }
+});
+
+function hoverFrom(target) {
+  const tok = target.closest(".tok");
+  if (tok) return [tok.dataset.g];
+  const g = target.closest("[data-groups]");
+  if (g) return g.dataset.groups.split(" ").filter(Boolean);
+  return [];
+}
+document.addEventListener("mouseover", e => { const h = hoverFrom(e.target); if (h.join() !== state.hover.join()) { state.hover = h; paint(); } });
+document.addEventListener("focusin", e => { state.hover = hoverFrom(e.target); paint(); });
+document.addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("tok-en")) { e.preventDefault(); e.target.click(); }
+});
+
+/* ---------- Boot ---------- */
+(function boot() {
+  let h = "";
+  try { h = decodeURIComponent(location.hash.slice(1)); } catch (e) {}
+  if (PASSAGES.some(p => p.id === h)) state.pid = h;
+  render();
+})();
+</script>
+<!-- ARTIFACT-BODY-END -->
+</body>
+</html>
