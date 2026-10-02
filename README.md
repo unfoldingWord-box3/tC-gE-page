@@ -5,6 +5,7 @@ A read-only, donor-facing page for exploring the translation resources behind fa
 **Status: design preview.** Open `index.html` in a browser. It needs no build step and has no dependencies besides Google Fonts.
 
 ## What it does
+- One passage card holds the ULT, the original language, and the UST. All three are aligned word by word, and the card stays in view while you scroll the resources.
 - A favorites rail lets people pick a passage. A passage can be one verse or a range, such as Psalm 23:1–2. Deep links work: `index.html#psalm-23-1-2`.
 - Alignment: hover or select an original-language word to highlight the matching ULT words, and the reverse. Selecting a word shows its lemma, Strong's number, grammar, and a link to its Translation Words article.
 - Hover a translation note to highlight its quote in both the original text and the ULT.
